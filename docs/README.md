@@ -33,14 +33,14 @@ This repository includes few module dependencies, since the main purpose of this
 
 Note that, depending on your platform and Python installation, the Python interpreter might not be invoked via `python3` but rather via `python` or simply `py`.
 
-### Conda
-Alternatively dependencies can be installed through Conda.
- - [Install miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions)
- - create a new virtual environment:
-   ```bash
-   conda create -n in3120 python=3.11.9 numpy=1.26.4 conda-forge::spacy=3.7.5 pytorch::faiss-cpu=1.10.0 colorama=0.4.6
-   conda activate in3120
-   ```
+Alternatively, dependencies can be installed through Conda. First, [install Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions). Then, create a new virtual environment:
+
+```text
+>conda create -n in3120 python=3.11.9 numpy=1.26.4 conda-forge::spacy=3.7.5 pytorch::faiss-cpu=1.10.0 colorama=0.4.6
+>conda activate in3120
+```
+
+The version numbers listed as arguments to `conda create` should match those listed in [`requirements.txt`](../requirements.txt).
 
 ## Assignments
 
