@@ -68,7 +68,17 @@ class SimpleSearchEngine:
         Returns the subset of cursors (or, rather, their indices) that are still "alive",
         i.e., the subset of cursors having posting lists that have not yet been exhausted.
         """
-        raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
+        alive_indices: List[int] = [
+            index   # what we're returning
+            for index, cursor in enumerate(cursors) # looping through indexes and cursor using enumerate
+            # reminder: enumerate loops over both index and val of a sequence
+            if cursor.current is not None # checks that current cursor is alive
+        ]
+        
+        # returns the list of indices that are alive
+        return alive_indices
+
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
 
     def _advance(self, cursors: List[Cursor], subset: List[int]) -> None:
         """"
