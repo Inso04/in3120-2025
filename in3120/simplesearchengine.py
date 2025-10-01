@@ -84,7 +84,20 @@ class SimpleSearchEngine:
         """"
         Advances the given subset of cursors.
         """
-        raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
+        # looping through subset
+        for index in subset:
+            # storing value of current cursor
+            cursor = cursors[index]
+            try:
+                # trying to get next posting from iterator
+                cursor.current = next(cursor.postings)
+
+            # exhausted / reached the end of an iteration
+            except StopIteration:
+                # marks cursor as dead
+                cursor.current = None
+        
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
 
     def _frontier(self, cursors: List[Cursor], subset: List[int]) -> Tuple[int, List[int]]:
         """
