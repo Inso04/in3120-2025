@@ -48,6 +48,7 @@ class PostingsMerger:
 
     @staticmethod
     def intersection(iter1: Iterator[Posting], iter2: Iterator[Posting]) -> Iterator[Posting]:
+        # AND gate
         """
         A generator that yields a simple AND(A, B) of two posting
         lists A and B, given iterators over these.
@@ -61,24 +62,34 @@ class PostingsMerger:
         All posting lists are assumed sorted in increasing order according
         to the document identifiers.
         """
-        current1 = next(iter1, None)
-        current2 = next(iter2, None)
 
-        # We can abort as soon as we exhaust one of the posting lists.
-        while current1 and current2:
+        # I will use both the iterator and default value for the next() function, 
+        # and setting default as None is perfect for reaching the end of the list  
 
-            # Increment the smallest one. Yield if we have a match.
-            if current1.document_id == current2.document_id:
-                yield current1
-                current1 = next(iter1, None)
-                current2 = next(iter2, None)
-            elif current1.document_id < current2.document_id:
-                current1 = next(iter1, None)
+        # first postings from list A and B
+        p1 = next(iter1, None) # post 1
+        p2 = next(iter2, None) # post 2
+
+        # Loops the lists until both have reached the end
+        while p1 is not None and p2 is not None:
+            if (p1.document_id == p2.document_id):
+                # If they share doc_id and just taking the min term_frequency
+                yield Posting(p1.document_id, min(p1.term_frequency, p2.term_frequency))
+                # Both lists advances to the next posting
+                p1 = next(iter1, None)
+                p2 = next(iter2, None)
+            elif p1.document_id < p2.document_id:
+                # Advances list A until its caught up with list B
+                p1 = next(iter1, None)
             else:
-                current2 = next(iter2, None)
+                # Vice versa ^
+                p2 = next(iter2, None)
+
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
 
     @staticmethod
     def union(iter1: Iterator[Posting], iter2: Iterator[Posting]) -> Iterator[Posting]:
+        # OR gate
         """
         A generator that yields a simple OR(A, B) of two posting
         lists A and B, given iterators over these.
@@ -92,32 +103,31 @@ class PostingsMerger:
         All posting lists are assumed sorted in increasing order according
         to the document identifiers.
         """
-        current1 = next(iter1, None)
-        current2 = next(iter2, None)
 
-        # First handle the case where neither posting list is exhausted.
-        while current1 and current2:
+        # first postings from list A and B
+        p1 = next(iter1, None) # post 1
+        p2 = next(iter2, None) # post 2
 
-            # Yield the smallest one.
-            if current1.document_id == current2.document_id:
-                yield current1
-                current1 = next(iter1, None)
-                current2 = next(iter2, None)
-            elif current1.document_id < current2.document_id:
-                yield current1
-                current1 = next(iter1, None)
+        while p1 is not None or p2 is not None:
+            if p2 is None or (p1 is not None and p1.document_id < p2.document_id):
+                # checks if list B has reached its limit OR list A's doc_id is smaller
+                yield p1
+                p1 = next(iter1, None)
+            elif p1 is None or p2.document_id < p1.document_id:
+                # vice versa of the first if
+                yield p2
+                p2 = next(iter2, None)
             else:
-                yield current2
-                current2 = next(iter2, None)
+                # if the same doc_id appears in both lists, keep one posting and max term_frequency
+                yield Posting(p1.document_id, max(p1.term_frequency, p2.term_frequency))
+                p1 = next(iter1, None)
+                p2 = next(iter2, None)
 
-        # We have exhausted at least one of the lists. Yield the remaining tail, if any.
-        current, tail = (current1, iter1) if current1 else (current2, iter2)
-        if current:
-            yield current
-            yield from tail
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
 
     @staticmethod
     def difference(iter1: Iterator[Posting], iter2: Iterator[Posting]) -> Iterator[Posting]:
+        # NAND gate
         """
         A generator that yields a simple ANDNOT(A, B) of two posting
         lists A and B, given iterators over these.
@@ -131,21 +141,24 @@ class PostingsMerger:
         All posting lists are assumed sorted in increasing order according
         to the document identifiers.
         """
-        current1 = next(iter1, None)
-        current2 = next(iter2, None)
 
-        # First handle the case where neither posting list is exhausted.
-        while current1 and current2:
-            if current1.document_id < current2.document_id:
-                yield current1
-                current1 = next(iter1, None)
-            elif current1.document_id > current2.document_id:
-                current2 = next(iter2, None)
+        # first postings from list A and B
+        p1 = next(iter1, None) # post 1
+        p2 = next(iter2, None) # post 2
+
+        # Loops until list A is exhausted
+        while p1 is not None:
+            if p2 is None or p1.document_id < p2.document_id:
+                # if list B has reached its limit OR list A's doc_id is smaller, 
+                # then this doc is unique to A and we keep it
+                yield Posting(p1.document_id, p1.term_frequency)
+                p1 = next(iter1, None)
+            elif p1.document_id == p2.document_id:
+                # If they share doc_id, skip and exclude from result
+                p1 = next(iter1, None)
+                p2 = next(iter2, None)
             else:
-                current1 = next(iter1, None)
-                current2 = next(iter2, None)
+                # if B is currently on a smaller doc_id, advance until it catches up to A
+                p2 = next(iter2, None)
 
-        # Yield the remaining elements in the first list, if any.
-        if current1:
-            yield current1
-            yield from iter1
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
