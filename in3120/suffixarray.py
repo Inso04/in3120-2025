@@ -48,7 +48,41 @@ class SuffixArray:
         Builds a simple suffix array from the set of named fields in the document collection.
         The suffix array allows us to search across all named fields in one go.
         """
-        raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
+        
+        # delimiter to separate content for different docs and fields
+        delimiter = " \0 "
+
+        for doc in self._corpus:
+            text = ""
+
+            for field in fields:
+                # get content from field, and normalize through analyzer
+                text += self._analyzer.join(str(doc.get_field(field, " ")))
+                text += delimiter # separating fields
+
+            # storing doc_id and its text
+            self._haystack.append((doc.get_document_id(), text))
+
+        # index for searching
+        doc_index = 0
+
+        # goes through the haystack
+        for _, content in self._haystack:
+            # look at each character position in the document's content
+            for offset in range(len(content)):
+            # checks if offset is at the start (0) or at the start of a word's boundary
+            # example: in the text "Hello world" only pos 0 and 6 is valid
+                if offset == 0 or content[offset - 1] in (" ", "\0"):
+                    # store pointer to this suffix: (doc_index, character_pos)
+                    self._suffixes.append((doc_index, offset))
+            doc_index += 1 # next posision
+
+        # sort suffixes alphabetically
+        self._suffixes.sort(
+            key=lambda 
+            pair: self._haystack[pair[0]][1][pair[1]:]
+            )
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
 
     def _get_suffix(self, pair: Tuple[int, int]) -> str:
         """
@@ -67,4 +101,43 @@ class SuffixArray:
         The matching documents are ranked according to how many times the query substring occurs in the document,
         and only the "best" matches are yielded back to the client. Ties are resolved arbitrarily.
         """
-        raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
+
+        # normalizing query using analyzer 
+        query_norm = self._analyzer.join(query)
+
+        # handles emty query cases
+        if not query_norm:
+            return iter([])
+
+        # help method checking if suffix starts with our query
+        def matching(pair: Tuple[int, int]) -> bool:
+            return self._get_suffix(pair).startswith(query_norm)
+        
+        # binary search to quickly find starting pos with our query
+        start = bisect_left(
+            self._suffixes,     # sorted list for binary search
+            query_norm,         # what we are looking for
+            key=lambda pair: self._get_suffix(pair) # how its extracted
+        )
+
+        # collect matching suffixes using takewhile
+        # NOTE TO SELF: all matches will be consecutive due to suffixes being sorted, 
+        # therefore the takewhile will stop when a suffix doesn't match
+        matching_suffixes = takewhile(
+            matching, self._suffixes[start:] # uses starting position for the binary search ^
+        )
+
+        # counter to check occurences of query in a doc
+        counts = Counter()
+
+        # checks for and updates occurences
+        for hay_idx, _ in matching_suffixes:
+            # gets doc_id for current suffix
+            doc_id = self._haystack[hay_idx][0]
+            counts.update([doc_id]) # incremets the counter for that doc
+
+        # returns the most common documents sorted by highest counts, 
+        # and limits result based on hit_count from given options
+        for doc_id, score in counts.most_common(options.hit_count):
+            yield SuffixArray.Result(self._corpus.get_document(doc_id), score)
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
