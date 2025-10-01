@@ -108,8 +108,24 @@ class SimpleSearchEngine:
         the smallest document identifier. Since posting lists are sorted in ascending order,
         the frontier represents the "leftmost" cursors when scanning from left to right.
         """
-        raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
+        # finding the smallest doc_id among alive cursors
+        min_doc_id = min(
+            cursors[index].current.document_id  # what we're storing
+            for index in subset # looping thorugh the subset
+        )
+    
+        # collect all cursor indices in the subset that positioned at the frontier doc
+        frontier_indices = [
+            index               # what we're storing
+            for index in subset # looping through the subset
+            if cursors[index].current.document_id == min_doc_id # checking if they match
+        ]
+        
+        # returning tuple with smallest doc_id and all cursor indices poiting to it
+        return (min_doc_id, frontier_indices)
 
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
+    
     def evaluate(self, query: str, ranker: Ranker, options: Options | None = None) -> Iterator[Result]:
         """
         Evaluates the given query, doing N-out-of-M ranked retrieval. I.e., for a supplied query having M
