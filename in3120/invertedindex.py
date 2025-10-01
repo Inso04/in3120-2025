@@ -81,11 +81,11 @@ class InMemoryInvertedIndex(InvertedIndex):
     """
 
     def __init__(self, corpus: Corpus, fields: Iterable[str], analyzer: Analyzer, compressed: bool = False):
-        self._corpus = corpus
-        self._analyzer = analyzer
-        self._posting_lists: List[PostingList] = []
+        self._corpus = corpus # all terms/types
+        self._analyzer = analyzer # normalizer & tokenizer
+        self._posting_lists: List[PostingList] = [] 
         self._dictionary = InMemoryDictionary()
-        self._build_index(fields, compressed)
+        self._build_index(fields, compressed) # fields måte å dele opp docs (metadata) eks.: tittel, 
 
     def __repr__(self):
         return str({term: self._posting_lists[term_id] for term, term_id in self._dictionary})
@@ -108,13 +108,18 @@ class InMemoryInvertedIndex(InvertedIndex):
         ranking. See https://nlp.stanford.edu/IR-book/html/htmledition/positional-indexes-1.html for
         further details.
         """
-        for document in self._corpus:
-            all_terms = itertools.chain.from_iterable(self.get_terms(document.get_field(f, "")) for f in fields)
-            term_frequencies = Counter(all_terms)
-            for term, term_frequency in term_frequencies.items():
-                term_id = self._add_to_dictionary(term)
-                self._append_to_posting_list(term_id, document.document_id, term_frequency, compressed)
-        self._finalize_index()
+
+        for doc in self._corpus: # går gjennom corpus
+            counter = Counter() # lager en counter
+            for field in fields: # går gjennom fields
+                counter.update(self.get_terms(doc[field])) # oppdaterer counter, tokenizer og normalizer
+
+            for word in counter: # går gjennom "term/words" i counter, bruker word for å differensiere
+                term_id = self._add_to_dictionary(word) # legger til ord til dict og returnerer ID
+                self._append_to_posting_list(term_id, doc.document_id, counter.get(word), compressed) # legges til i posting list
+
+        self._finalize_index() # finalize
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
 
     def _add_to_dictionary(self, term: str) -> int:
         """
@@ -130,15 +135,20 @@ class InMemoryInvertedIndex(InvertedIndex):
         must be kept sorted so that we can efficiently traverse and
         merge them when querying the inverted index.
         """
-        # Locate the posting list for this term. Create it, if needed.
-        assert term_id >= 0
-        assert document_id >= 0
-        assert term_frequency > 0
-        if term_id >= len(self._posting_lists):
-            assert term_id == len(self._posting_lists)
-            self._posting_lists.append(CompressedInMemoryPostingList() if compressed else InMemoryPostingList())
-        posting_list = self._posting_lists[term_id]
-        posting_list.append_posting(Posting(document_id, term_frequency))
+
+        post = Posting(document_id, term_frequency) # lager en post
+
+        # sjekker at term_id er større og må legges til i posting list
+        # og putter den i riktg type posting list
+        while term_id >= len(self._posting_lists):
+            if compressed:
+                self._posting_lists.append(CompressedInMemoryPostingList()) 
+            else:
+                self._posting_lists.append(InMemoryPostingList()) 
+        
+        # legges til i postinglist med term_id
+        self._posting_lists[term_id].append_posting(post)
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
 
     def _finalize_index(self):
         """
@@ -146,10 +156,12 @@ class InMemoryInvertedIndex(InvertedIndex):
         implementations that need it with the chance to tie up any loose ends,
         if needed.
         """
-        # For example, if we do compression in chunks or do bit-level compression then there
-        # might be outstanding data to be processed.
-        for posting_list in self._posting_lists:
-            posting_list.finalize_postings()
+        
+        # går gjennom posting_lists
+        for post_list in self._posting_lists:
+            post_list.finalize_postings() # kaller på finalize posting
+
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
 
     def get_terms(self, buffer: str) -> Iterator[str]:
         # In a serious large-scale application there could be field- and language-specific
@@ -163,17 +175,18 @@ class InMemoryInvertedIndex(InvertedIndex):
         return (s for s, _ in self._dictionary)
 
     def get_postings_iterator(self, term: str) -> Iterator[Posting]:
-        # Assume that everything fits in memory. This would not be the case in a serious
-        # large-scale application, even with compression.
-        term_id = self._dictionary.get_term_id(term)
-        return iter([]) if term_id is None else iter(self._posting_lists[term_id])
+        term_id = self._dictionary.get_term_id(term) # henter term_id
+        if term_id is None: # returner tom Iterator hvis den ikke eksiterer
+            return iter([])
+        return iter(self._posting_lists[term_id])
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
 
     def get_document_frequency(self, term: str) -> int:
-        # In a serious large-scale application we'd store this number explicitly, e.g., as part of the dictionary.
-        # That way, we can look up the document frequency without having to access the posting lists
-        # themselves. Imagine if the posting lists don't even reside in memory!
-        term_id = self._dictionary.get_term_id(term)
-        return 0 if term_id is None else self._posting_lists[term_id].get_length()
+        term_id = self._dictionary.get_term_id(term) # henter term_id
+        if term_id is None: # returnerer 0 hvis den ikke eksiterer
+            return 0
+        return len(self._posting_lists[term_id])
+        #raise NotImplementedError("You need to implement this as part of the obligatory assignment.")
 
 
 class DummyInMemoryInvertedIndex(InMemoryInvertedIndex):
